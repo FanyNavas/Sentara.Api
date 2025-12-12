@@ -21,7 +21,7 @@ El **frontend** realiza el reconocimiento facial en el navegador usando **face-a
 - Envía capturas en Base64 al backend  
 - Todo el reconocimiento ocurre **localmente**, sin cargar el servidor
 
-### ✅ Backend (.NET Web API)
+### Backend (.NET Web API)
 - Recibe asistencia y la guarda en SQL Server  
 - Guarda capturas como archivos PNG  
 - Envía correos con adjuntos al docente  
