@@ -1,0 +1,593 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Sentara • Attendance</title>
+<style>
+  :root{
+    --bg:#020617;
+    --bg-deep:#020617;
+    --card:#111827;
+    --muted:#1f2937;
+    --text:#e5e7eb;
+    --blue:#2563eb;
+    --green:#16a34a;
+    --red:#dc2626;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font:16px/1.4 system-ui,Segoe UI,Roboto;
+  }
+
+  /* Splash screen */
+  .splash{
+    position:fixed;
+    inset:0;
+    background:radial-gradient(circle at top, #1e293b 0, #020617 55%, #000000 100%);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:9999;
+    color:#e5e7eb;
+  }
+  .splash-inner{
+    text-align:center;
+    max-width:420px;
+    padding:32px 24px;
+    border-radius:24px;
+    background:linear-gradient(180deg,rgba(15,23,42,.95),rgba(15,23,42,.85));
+    border:1px solid rgba(148,163,184,.3);
+    box-shadow:0 24px 80px rgba(15,23,42,.9);
+  }
+  .face-ring{
+    width:120px;
+    height:120px;
+    margin:0 auto 18px;
+    border-radius:999px;
+    border:2px solid rgba(59,130,246,.6);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    position:relative;
+    overflow:hidden;
+  }
+  .face-ring::before{
+    content:"";
+    position:absolute;
+    inset:18px;
+    border-radius:999px;
+    border:1px dashed rgba(96,165,250,.6);
+    animation:spin 4s linear infinite;
+  }
+  .face-dot{
+    width:18px;
+    height:18px;
+    border-radius:50%;
+    border:2px solid rgba(56,189,248,.9);
+    box-shadow:0 0 18px rgba(56,189,248,.7);
+  }
+  @keyframes spin{
+    from{transform:rotate(0deg)}
+    to{transform:rotate(360deg)}
+  }
+  .splash-title{
+    font-size:26px;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+    margin-bottom:4px;
+  }
+  .splash-sub{
+    font-size:14px;
+    opacity:.85;
+    margin-bottom:16px;
+  }
+  .splash-pill{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    padding:4px 10px;
+    border-radius:999px;
+    background:rgba(15,118,110,.18);
+    border:1px solid rgba(45,212,191,.5);
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:.12em;
+    margin-bottom:16px;
+  }
+  .splash-btn{
+    margin-top:10px;
+    width:100%;
+    border:0;
+    border-radius:999px;
+    padding:10px 14px;
+    cursor:pointer;
+    background:linear-gradient(90deg,#2563eb,#4f46e5);
+    color:#e5e7eb;
+    font-weight:500;
+  }
+  .splash-fade-out{
+    animation:splashFadeOut 0.8s ease forwards;
+  }
+  @keyframes splashFadeOut{
+    from{opacity:1;transform:scale(1)}
+    to{opacity:0;transform:scale(1.02)}
+  }
+
+  /* Main app layout */
+  .container{max-width:980px;margin:24px auto;padding:0 16px}
+  .wrap{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:10px}
+  .card{
+    background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:16px;
+    padding:18px;
+  }
+  h1{margin:0 0 6px 0;font-size:22px}
+  h2{margin:0 0 10px 0;font-size:18px}
+  label{display:block;margin:10px 0 6px}
+  input,button{width:100%}
+  input{
+    background:#0f162e;
+    border:1px solid rgba(255,255,255,.18);
+    color:var(--text);
+    border-radius:10px;
+    padding:10px;
+  }
+  button{
+    background:var(--blue);
+    border:0;
+    color:#fff;
+    border-radius:10px;
+    padding:12px 14px;
+    margin-top:10px;
+    cursor:pointer;
+  }
+  .hint{font-size:12px;opacity:.85}
+  .ok{margin-top:10px;color:#16a34a;display:none}
+  .err{margin-top:10px;color:#f87171;display:none}
+  video,canvas{
+    width:100%;
+    border-radius:12px;
+    border:1px solid rgba(255,255,255,.08);
+    background:#000;
+    aspect-ratio:16/10;
+  }
+  .controls{display:flex;gap:8px;margin-top:8px}
+  .btn-danger{background:var(--red)}
+  .badge{
+    display:inline-block;
+    padding:6px 10px;
+    border-radius:999px;
+    font-size:12px;
+    border:1px solid rgba(255,255,255,.18)
+  }
+  .waiting{background:rgba(245,158,11,.18)}
+  .ready{background:rgba(22,163,74,.18)}
+  .bad{background:rgba(220,38,38,.20)}
+  .grid-two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .row{display:flex;gap:10px;align-items:center}
+</style>
+</head>
+<body>
+
+<!-- Splash screen -->
+<div id="splash" class="splash">
+  <div class="splash-inner">
+    <div class="face-ring">
+      <div class="face-dot"></div>
+    </div>
+    <div class="splash-pill">
+      <span>Facial Recognition Attendance</span>
+    </div>
+    <div class="splash-title">SENTARA</div>
+    <div class="splash-sub">Smart, secure in-class and remote attendance.</div>
+    <button id="enterSplash" class="splash-btn">Enter Sentara</button>
+    <p class="hint" style="margin-top:8px;opacity:.7"></p>
+  </div>
+</div>
+
+<!-- Main app -->
+<div id="app" style="display:none">
+  <div class="container">
+    <div class="row">
+      <h1 style="margin-right:auto">Sentara — Attendance</h1>
+      <div class="hint" id="health">Backend: (checking…)</div>
+    </div>
+    <p class="hint">Enroll with an official photo; we verify against the live camera. Submit unlocks only after a match (Attendance = Yes).</p>
+
+    <div class="wrap">
+      <!-- LEFT: Camera -->
+      <div class="card">
+        <h2>Camera preview</h2>
+        <video id="video" autoplay playsinline muted></video>
+        <canvas id="snap" style="display:none"></canvas>
+        <div class="controls">
+          <button id="startCam">Start camera</button>
+          <button id="stopCam" class="btn-danger" disabled>Stop</button>
+        </div>
+        <p class="hint"><code></code></p>
+        <div id="camOk" class="ok">✓ Camera is running.</div>
+        <div id="camErr" class="err">⚠ Could not start camera.</div>
+        <div class="hint" id="modelStatus">Loading face models…</div>
+      </div>
+
+      <!-- RIGHT: Form + Enroll -->
+      <div class="card">
+        <h2>Attendance form</h2>
+
+        <label>Teacher email</label>
+        <input id="teacher" type="email" placeholder="prof@example.edu" required>
+
+        <label>Student name</label>
+        <input id="student" type="text" placeholder="— waiting for recognition —" readonly>
+
+        <label>Class name</label>
+        <input id="className" type="text" placeholder="e.g., Intro to CS A-204" required>
+
+        <!-- Hidden: status auto-Yes after recognition -->
+        <input id="status" type="hidden" value="">
+        <div class="hint">Status: <span id="recBadge" class="badge waiting">Waiting for recognition…</span></div>
+
+        <button id="btnSubmit" disabled>Submit</button>
+        <div id="ok" class="ok">✓ Email sent to the teacher.</div>
+        <div id="err" class="err">⚠ Error. See message above.</div>
+
+        <hr style="opacity:.15;margin:16px 0">
+
+        <h2>Enroll a student (verified against camera)</h2>
+        <div class="grid-two">
+          <div>
+            <label>Official photo (jpg/png)</label>
+            <input id="enrollPhoto" type="file" accept="image/*">
+          </div>
+          <div>
+            <label>Student name</label>
+            <input id="enrollName" type="text" placeholder="Full name">
+          </div>
+        </div>
+        <button id="btnEnroll" style="background:#334155">Enroll & Verify</button>
+        <div class="hint" id="enrollList">Enrolled: (none)</div>
+        <div class="hint">Last distance (photo vs live): <b id="lastDist">—</b></div>
+
+        <div id="verifyMsg" class="err" style="display:none"></div>
+        <button id="btnManual" class="btn-danger" style="display:none">Request manual review</button>
+        <div class="hint">Retries left: <span id="retriesLeft">3</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- face-api.js -->
+<script src="https://unpkg.com/face-api.js@0.22.2/dist/face-api.min.js"></script>
+
+<script>
+  // ----- CONFIG -----
+  const BACKEND = 'http://127.0.0.1:3001';
+  const THRESHOLD = 0.5;
+  const MAX_RETRIES = 3;
+
+  async function checkHealth(){
+  const el = document.getElementById('health');
+  try{
+    const r = await fetch(BACKEND + '/api/health', { cache: 'no-store' });
+    el.textContent = r.ok ? 'Backend: OK' : 'Backend: unreachable';
+  }catch(e){
+    el.textContent = 'Backend: unreachable';
+  }
+}
+
+  // ----- Splash + voice -----
+  function playWelcomeVoice(){
+    if (!('speechSynthesis' in window)) return;
+    const utter = new SpeechSynthesisUtterance("Welcome to Sentara");
+    utter.rate = 1;
+    utter.pitch = 1;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utter);
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const splash = document.getElementById('splash');
+    const app = document.getElementById('app');
+    const enterBtn = document.getElementById('enterSplash');
+
+    enterBtn.addEventListener('click', () => {
+      // user gesture → audio allowed
+      playWelcomeVoice();
+      // keep splash briefly, then fade out and show app
+      setTimeout(() => {
+        splash.classList.add('splash-fade-out');
+        setTimeout(() => {
+          splash.style.display = 'none';
+          app.style.display = 'block';
+        }, 800);
+      }, 1500); // ~1.5s with voice before fade
+    });
+  });
+
+  // ----- Prefill teacher from URL (?to=) -----
+  const url = new URL(window.location.href);
+  const teacherParam = url.searchParams.get('to');
+  if (teacherParam) document.getElementById('teacher').value = teacherParam;
+
+  // ----- Health check -----
+  async function checkHealth(){
+    const el = document.getElementById('health');
+    try{
+      const r = await fetch(BACKEND + '/api/health', { cache: 'no-store' });
+      el.textContent = r.ok ? 'Backend: OK' : 'Backend: unreachable';
+    }catch(e){
+      el.textContent = 'Backend: unreachable';
+    }
+  }
+  checkHealth();
+
+  // ----- Camera -----
+  let stream;
+  const video = document.getElementById('video');
+  const startBtn = document.getElementById('startCam');
+  const stopBtn  = document.getElementById('stopCam');
+  const camOk  = document.getElementById('camOk');
+  const camErr = document.getElementById('camErr');
+
+  startBtn.onclick = async () => {
+    camOk.style.display = 'none'; camErr.style.display = 'none';
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+      video.srcObject = stream;
+      startBtn.disabled = true; stopBtn.disabled = false; camOk.style.display = 'block';
+    } catch (e) {
+      camErr.textContent = '⚠ Could not start camera: ' + (e.message || e);
+      camErr.style.display = 'block';
+    }
+  };
+  stopBtn.onclick = () => {
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    video.srcObject = null; startBtn.disabled = false; stopBtn.disabled = true; camOk.style.display = 'none';
+  };
+
+  // ----- Recognition state -----
+  let retries = MAX_RETRIES;
+  let labeledDescriptors = [];
+  let matcher = null;
+
+  const recBadge = document.getElementById('recBadge');
+  const submitBtn = document.getElementById('btnSubmit');
+  const studentInput = document.getElementById('student');
+  const statusHidden = document.getElementById('status');
+  const verifyMsg = document.getElementById('verifyMsg');
+  const retriesLeft = document.getElementById('retriesLeft');
+  const btnManual = document.getElementById('btnManual');
+  const enrollList = document.getElementById('enrollList');
+  const lastDistEl = document.getElementById('lastDist');
+
+  function setWaiting(msg='Waiting for recognition…'){
+    recBadge.textContent = msg;
+    recBadge.className = 'badge waiting';
+    submitBtn.disabled = true;
+    statusHidden.value = '';
+    studentInput.value = '';
+  }
+  function setBad(msg){
+    recBadge.textContent = msg;
+    recBadge.className = 'badge bad';
+    submitBtn.disabled = true;
+    statusHidden.value = '';
+  }
+  function onRecognized(name){
+    studentInput.value = name;
+    statusHidden.value = 'yes';
+    submitBtn.disabled = false;
+    recBadge.textContent = 'Recognized: ' + name;
+    recBadge.className = 'badge ready';
+  }
+  function refreshEnrollList(){
+    enrollList.textContent = 'Enrolled: ' + (labeledDescriptors.length ? labeledDescriptors.map(l => l.label).join(', ') : '(none)');
+  }
+  function l2(a,b){ let s=0; for(let i=0;i<a.length;i++){ const d=a[i]-b[i]; s+=d*d; } return Math.sqrt(s); }
+
+  // ----- Models -----
+  const modelStatus = document.getElementById('modelStatus');
+  async function loadModels(){
+    const base = 'https://justadudewhohacks.github.io/face-api.js/models';
+    await faceapi.nets.tinyFaceDetector.loadFromUri(base);
+    await faceapi.nets.faceLandmark68Net.loadFromUri(base);
+    await faceapi.nets.faceRecognitionNet.loadFromUri(base);
+    modelStatus.textContent = 'Models loaded ✓. Enroll & verify is ready.';
+  }
+  loadModels();
+
+  // ----- Enrollment & verify -----
+  document.getElementById('btnEnroll').onclick = async () => {
+    verifyMsg.style.display = 'none';
+    btnManual.style.display = 'none';
+
+    if (!video.srcObject){
+      verifyMsg.textContent = 'Start the camera first.';
+      verifyMsg.style.display = 'block'; return;
+    }
+    const file = document.getElementById('enrollPhoto').files[0];
+    const name = document.getElementById('enrollName').value.trim();
+    if (!file || !name){
+      verifyMsg.textContent = 'Select a photo and type the student name.';
+      verifyMsg.style.display = 'block'; return;
+    }
+
+    const img = await faceapi.bufferToImage(file);
+    const detPhoto = await faceapi
+      .detectSingleFace(img, new faceapi.TinyFaceDetectorOptions())
+      .withFaceLandmarks()
+      .withFaceDescriptor();
+    if (!detPhoto){
+      verifyMsg.textContent = 'No face detected in the uploaded photo.';
+      verifyMsg.style.display = 'block'; return;
+    }
+
+    const snap = document.getElementById('snap');
+    snap.width = video.videoWidth; snap.height = video.videoHeight;
+    snap.getContext('2d').drawImage(video, 0, 0, snap.width, snap.height);
+    const detLive = await faceapi
+      .detectSingleFace(snap, new faceapi.TinyFaceDetectorOptions())
+      .withFaceLandmarks()
+      .withFaceDescriptor();
+    if (!detLive){
+      verifyMsg.textContent = 'No face detected on camera. Check lighting.';
+      verifyMsg.style.display = 'block'; return;
+    }
+
+    const distance = l2(detPhoto.descriptor, detLive.descriptor);
+    lastDistEl.textContent = distance.toFixed(3);
+
+    if (distance > THRESHOLD){
+      retries--; retriesLeft.textContent = retries;
+      setBad('Face mismatch');
+      verifyMsg.textContent = `❌ Mismatch (distance ${distance.toFixed(3)} > ${THRESHOLD}). Try again.`;
+      verifyMsg.style.display = 'block';
+      if (retries <= 0){ btnManual.style.display = 'inline-block'; }
+      return;
+    }
+
+    labeledDescriptors.push(new faceapi.LabeledFaceDescriptors(name, [detPhoto.descriptor]));
+    matcher = new faceapi.FaceMatcher(labeledDescriptors, THRESHOLD);
+    refreshEnrollList();
+    retries = MAX_RETRIES; retriesLeft.textContent = retries;
+    verifyMsg.style.display = 'none';
+    btnManual.style.display = 'none';
+    onRecognized(name);
+    recBadge.textContent = 'Recognized: ' + name + ' (verified)';
+  };
+
+  // ----- Manual review -----
+  document.getElementById('btnManual').onclick = async () => {
+    const teacher = document.getElementById('teacher').value.trim();
+    const claimedName = document.getElementById('enrollName').value.trim() || '(no name typed)';
+    const className = document.getElementById('className').value.trim() || '(no class typed)';
+    const reason = 'Face mismatch after 3 retries';
+
+    const upload = document.getElementById('enrollPhoto').files[0];
+    let photoDataUrl = null;
+    if (upload) {
+      photoDataUrl = await new Promise(resolve => {
+        const r = new FileReader();
+        r.onload = () => resolve(r.result);
+        r.readAsDataURL(upload);
+      });
+    }
+    const liveDataUrl = snapshotPNG();
+    
+    try {
+      const res = await fetch(BACKEND + '/api/manual-review', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json' },
+        body: JSON.stringify({ teacher, claimedName, className, reason, photoDataUrl, liveDataUrl })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        verifyMsg.textContent = 'Manual review email sent.';
+        verifyMsg.style.display = 'block';
+      } else {
+        verifyMsg.textContent = 'Failed to send manual review email: ' + (data.error || 'unknown');
+        verifyMsg.style.display = 'block';
+      }
+    } catch (e) {
+      verifyMsg.textContent = 'Network/Server error during manual review.';
+      verifyMsg.style.display = 'block';
+    }
+  };
+
+  refreshEnrollList();
+  setWaiting();
+
+  // ----- Continuous recognition -----
+  let loopId = null;
+  async function recognitionTick(){
+    if (!video.srcObject || !matcher) return;
+    const snap = document.getElementById('snap');
+    snap.width = video.videoWidth; snap.height = video.videoHeight;
+    const ctx = snap.getContext('2d');
+    ctx.drawImage(video, 0, 0, snap.width, snap.height);
+
+    const det = await faceapi
+      .detectSingleFace(snap, new faceapi.TinyFaceDetectorOptions())
+      .withFaceLandmarks()
+      .withFaceDescriptor();
+    if (!det) return;
+
+    const best = matcher.findBestMatch(det.descriptor);
+    if (best && best.label !== 'unknown'){
+      onRecognized(best.label);
+    }
+  }
+  function startRecognitionLoop(){ if (!loopId) loopId = setInterval(recognitionTick, 600); }
+  const readyCheck = setInterval(()=>{ if (video.srcObject) { startRecognitionLoop(); clearInterval(readyCheck); } }, 500);
+
+  // ----- Snapshot helper -----
+  function snapshotPNG() {
+    const snap = document.getElementById('snap');
+    try {
+      if (video && video.srcObject) {
+        snap.width = video.videoWidth; snap.height = video.videoHeight;
+        snap.getContext('2d').drawImage(video, 0, 0, snap.width, snap.height);
+      }
+      return snap.toDataURL('image/png');
+    } catch(e) { return null; }
+  }
+
+  // ----- Submit → backend -----
+  document.getElementById('btnSubmit').addEventListener('click', async () => {
+    const teacher = document.getElementById('teacher').value.trim();
+    const student = document.getElementById('student').value.trim();
+    const className = document.getElementById('className').value.trim();
+    const status = document.getElementById('status').value;
+    const ok = document.getElementById('ok'); const err = document.getElementById('err');
+    ok.style.display = 'none'; err.style.display = 'none';
+
+    if (!teacher || !className){ err.textContent = '⚠ Please fill teacher email and class name.'; err.style.display = 'block'; return; }
+    if (!status || !student){   err.textContent = '⚠ Submit allowed only after recognition.'; err.style.display = 'block'; return; }
+
+    const snap = document.getElementById('snap');
+    snap.width = video.videoWidth; snap.height = video.videoHeight;
+    snap.getContext('2d').drawImage(video, 0, 0, snap.width, snap.height);
+    const det = await faceapi
+      .detectSingleFace(snap, new faceapi.TinyFaceDetectorOptions())
+      .withFaceLandmarks()
+      .withFaceDescriptor();
+    if (!det){ err.textContent = '⚠ No face on camera at submit time.'; err.style.display = 'block'; return; }
+    if (matcher){
+      const best = matcher.findBestMatch(det.descriptor);
+      if (!best || best.label !== student){
+        err.textContent = '⚠ Re-check failed. Face does not match enrolled student.';
+        err.style.display = 'block';
+        setWaiting('Re-check failed');
+        return;
+      }
+    }
+
+    const snapshotDataUrl = snapshotPNG();
+
+    try {
+      const res = await fetch(BACKEND + '/api/submit', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json' },
+        body: JSON.stringify({ teacher, student, className, status, snapshotDataUrl })
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        ok.textContent = '✓ Email sent to the teacher.';
+        ok.style.display = 'block';
+      } else {
+        err.textContent = '⚠ Email failed: ' + (data.error || 'unknown');
+        err.style.display = 'block';
+      }
+    } catch (e) {
+      err.textContent = '⚠ Network/Server error: ' + e.message;
+      err.style.display = 'block';
+    }
+  });
+</script>
+</body>
+</html>
